@@ -20,8 +20,14 @@ FOLDER_NAME = 'aggregates'
 
 
 def extract(dpath, subpath):
-    scalar_accumulators = [EventAccumulator(str(dpath / dname / subpath)).Reload(
-    ).scalars for dname in os.listdir(dpath) if dname != FOLDER_NAME]
+
+    scalar_accumulators = []
+    for seed_path in os.listdir(dpath / subpath):
+        if os.path.isdir(dpath / subpath / seed_path):
+            for event_path in os.listdir(dpath / subpath / seed_path):
+                if 'event' in event_path:
+                    scalar_accumulators.append(EventAccumulator(str(dpath / subpath / seed_path / event_path)).Reload().scalars)
+
 
     # Filter non event files
     scalar_accumulators = [scalar_accumulator for scalar_accumulator in scalar_accumulators if scalar_accumulator.Keys()]
@@ -100,7 +106,7 @@ def write_csv(dpath, subpath, key, fname, aggregations, steps, aggregation_ops):
     df.to_csv(path / file_name, sep=';')
 
 
-def aggregate(dpath, output, subpaths):
+def aggregate(dpath, output):
     name = dpath.name
 
     aggregation_ops = [np.mean, np.min, np.max, np.median, np.std, np.var]
@@ -109,6 +115,13 @@ def aggregate(dpath, output, subpaths):
         'summary': aggregate_to_summary,
         'csv': aggregate_to_csv
     }
+
+    subpaths = []
+
+    for subdir in os.listdir(dpath) :
+        if os.path.isdir(dpath / subdir):
+            subpaths.append(subdir)
+
 
     print("Started aggregation {}".format(name))
 
@@ -128,7 +141,6 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--path", type=str, help="main path for tensorboard files", default=os.getcwd())
-    parser.add_argument("--subpaths", type=param_list, help="subpath sturctures", default=['test', 'train'])
     parser.add_argument("--output", type=str, help="aggregation can be saves as tensorboard file (summary) or as table (csv)", default='summary')
 
     args = parser.parse_args()
@@ -138,13 +150,4 @@ if __name__ == '__main__':
     if not path.exists():
         raise argparse.ArgumentTypeError("Parameter {} is not a valid path".format(path))
 
-    subpaths = [path / dname / subpath for subpath in args.subpaths for dname in os.listdir(path) if dname != FOLDER_NAME]
-
-    for subpath in subpaths:
-        if not os.path.exists(subpath):
-            raise argparse.ArgumentTypeError("Parameter {} is not a valid path".format(subpath))
-
-    if args.output not in ['summary', 'csv']:
-        raise argparse.ArgumentTypeError("Parameter {} is not summary or csv".format(args.output))
-
-    aggregate(path, args.output, args.subpaths)
+    aggregate(path, args.output)
