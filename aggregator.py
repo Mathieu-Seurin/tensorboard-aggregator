@@ -43,9 +43,22 @@ def extract(dpath, subpath):
     all_steps_per_key = [[tuple(scalar_event.step for scalar_event in scalar_events) for scalar_events in all_scalar_events]
                          for all_scalar_events in all_scalar_events_per_key]
 
+
+    key_to_delete = []
     for i, all_steps in enumerate(all_steps_per_key):
-        assert len(set(all_steps)) == 1, "For scalar {} the step numbering or count doesn't match. Step count for all runs: {}".format(
-            keys[i], [len(steps) for steps in all_steps])
+        if len(set(all_steps)) != 1:
+            print("Warning, not all steps are the same for key {}, deleting it".format(keys[i]))
+            print("Steps are : ", [len(steps) for steps in all_steps])
+            # assert len(set(all_steps)) == 1, "For scalar {} the step numbering or count doesn't match. Step count for all runs: {}".format(
+            #     keys[i], [len(steps) for steps in all_steps])
+            key_to_delete.append(i)
+
+    keys = list(keys)
+    for key in reversed(key_to_delete):
+        del all_steps_per_key[key]
+        del all_scalar_events_per_key[key]
+        del keys[key]
+
 
     steps_per_key = [all_steps[0] for all_steps in all_steps_per_key]
 
